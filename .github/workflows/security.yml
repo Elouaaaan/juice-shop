@@ -34,31 +34,34 @@ jobs:
             npm install
           fi
 
-  sca-dependency-check:
-    name: SCA - OWASP Dependency-Check
+  sca-snyk:
+    name: SCA - Snyk Dependency Scan
     runs-on: ubuntu-latest
     needs: prepare
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      - name: Ensure dependencies installed
+          node-version: '22'
+      - name: Install dependencies
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-      - name: Run OWASP Dependency-Check
-        uses: OWASP/dependency-check-action@v2
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+      - name: Run Snyk test
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          scan: '.'
-          format: 'ALL'
-          out: 'dependency-check-report'
-      - name: Upload Dependency-Check reports
+          args: test --json-file-output=snyk-report.json
+      - name: Upload Snyk report
         uses: actions/upload-artifact@v4
         with:
-          name: dependency-check-reports
-          path: dependency-check-report
-
+          name: snyk-report
+          path: snyk-report.json
