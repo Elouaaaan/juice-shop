@@ -1,97 +1,40 @@
-name: Security CI
+name: Security Scan
 
 on:
   push:
-    branches: ["master"]
+    branches: [ main ]
   pull_request:
-    types: [opened, synchronize, reopened, edited, ready_for_review]
-
-permissions:
-  contents: read
-  security-events: write
 
 jobs:
-  sca:
-    name: SCA - OWASP Dependency-Check
+  security:
     runs-on: ubuntu-latest
+    name: Security CI Pipeline
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 20
 
-      - name: Install dependencies (npm)
-        run: npm ci
+      - name: Install dependencies
+        run: npm install
 
-      - name: Setup Java (required by Dependency-Check)
-        uses: actions/setup-java@v4
+      - name: SCA - Snyk dependency scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          distribution: 'temurin'
-          java-version: '11'
-
-      - name: Run OWASP Dependency-Check
-        id: depcheck
-        uses: dependency-check/Dependency-Check_Action@main
+          command: test
+      
+      - name: SAST - Semgrep static analysis
+        uses: returntocorp/semgrep-action@v1
         with:
-          project: 'juice-shop'
-          path: '.'
-          format: 'HTML'
-          out: 'dependency-check-reports'
-          args: >
-            --failOnCVSS 7
-            --scan ./
+          config: "p/owasp-top-ten"
 
-      - name: Upload Dependency-Check report
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Secret Scan - Gitleaks
+        uses: gitleaks/gitleaks-action@v2
         with:
-          name: dependency-check-report
-          path: dependency-check-reports
-
-  sast:
-    name: SAST - Static Application Security Testing (CodeQL)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
-        with:
-          languages: javascript
-
-      - name: Build (install deps)
-        run: npm ci
-
-      - name: Run CodeQL analysis
-        uses: github/codeql-action/analyze@v2
-
-  secret_scan:
-    name: Secret scanning (Gitleaks)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install dependencies (npm)
-        run: npm ci
-
-      - name: Run Gitleaks (detect secrets)
-        uses: zricethezav/gitleaks-action@v2
-        with:
-          args: '--path=. --report-path=gitleaks-report.json --redact'
-
-      - name: Upload Gitleaks report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitleaks-report
-          path: gitleaks-report.json
+          args: detect --source . --no-git --verbose
