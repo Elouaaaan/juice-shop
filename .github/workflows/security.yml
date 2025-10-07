@@ -1,6 +1,12 @@
 name: Security Test
 
 on:
-	push:
-		branch:
-			- master
+    push:
+        branches:
+            - master
+    pull_request:
+        types: [opened, reopened]
+
+jobs:
+    scans:
+        runs-on: ubuntu-latest
