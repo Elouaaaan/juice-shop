@@ -24,7 +24,7 @@ jobs:
         id: node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Install dependencies (generate lockfile)
         run: |
           # use npm ci if package-lock.json already exists, otherwise npm install
