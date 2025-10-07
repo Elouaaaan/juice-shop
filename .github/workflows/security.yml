@@ -1,40 +1,92 @@
-name: Security Scan
+name: Security Scan (SCA + SAST + Secrets) with SARIF
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
 
 jobs:
   security:
     runs-on: ubuntu-latest
-    name: Security CI Pipeline
+    name: Security CI Pipeline (produce SARIF)
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install npm dependencies
+        run: npm ci
 
-      - name: SCA - Snyk dependency scan
-        uses: snyk/actions/node@master
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Snyk test (produce SARIF)
+        id: snyk_scan
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test
-      
-      - name: SAST - Semgrep static analysis
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: "p/owasp-top-ten"
+        run: |
+          # Snyk peut renvoyer un exit code non-zéro si des vuln trouvent ;
+          # on ne veut pas bloquer l'exécution pour pouvoir uploader le SARIF.
+          snyk test --all-projects --sarif-file-output=snyk-results.sarif || true
+        continue-on-error: true
 
-      - name: Secret Scan - Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+      - name: Install Python (for Semgrep) and Semgrep
+        uses: actions/setup-python@v4
         with:
-          args: detect --source . --no-git --verbose
+          python-version: '3.11'
+
+      - name: Install semgrep
+        run: python -m pip install --upgrade pip && pip install semgrep
+
+      - name: Semgrep scan (OWASP rules) -> semgrep-results.sarif
+        id: semgrep_scan
+        run: |
+          # Utilise le pack p/owasp-top-ten ; génère SARIF
+          semgrep scan --config p/owasp-top-ten --sarif-output=semgrep-results.sarif || true
+
+      - name: Run Gitleaks (detect -> gitleaks-results.sarif)
+        id: gitleaks_scan
+        uses: zricethezav/gitleaks-action@v8
+        with:
+          args: detect --source . --report-format sarif --report-path gitleaks-results.sarif --no-git
+        # continue-on-error pour que les uploads SARIF se fassent même si gitleaks trouve des secrets
+        continue-on-error: true
+
+      - name: Upload Snyk SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: snyk-results.sarif
+          category: snyk-sca
+
+      - name: Upload Semgrep SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep-sast
+
+      - name: Upload Gitleaks SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: gitleaks-results.sarif
+          category: gitleaks-secrets
+
+      - name: Upload SARIF artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sarif-reports
+          path: |
+            snyk-results.sarif
+            semgrep-results.sarif
+            gitleaks-results.sarif
