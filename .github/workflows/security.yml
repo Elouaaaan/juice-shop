@@ -36,11 +36,20 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --json --all-projects
+          args: --json-file-output=snyk-report.json --sarif-file-output=snyk.sarif --all-projects
         continue-on-error: true
 
-      - name: Upload Snyk report
+      - name: Debug list files
+        run: ls -la
+
+      - name: Upload Snyk JSON report
         uses: actions/upload-artifact@v4
         with:
-          name: snyk-report
+          name: snyk-report-json
           path: snyk-report.json
+
+      - name: Upload Snyk SARIF report
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-report-sarif
+          path: snyk.sarif
