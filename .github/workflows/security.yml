@@ -1,0 +1,6 @@
+name: Security Test
+
+on:
+	push:
+		branch:
+			- master
