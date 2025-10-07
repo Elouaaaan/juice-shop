@@ -56,7 +56,6 @@ jobs:
           echo "npm audit written to reports/npm-audit.json"
 
       - name: Snyk test (optional, requires SNYK_TOKEN secret)
-        if: ${{ secrets.SNYK_TOKEN != '' }}
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
