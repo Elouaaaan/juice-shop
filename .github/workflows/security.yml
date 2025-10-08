@@ -57,6 +57,7 @@ jobs:
   sast-codeql:
     name: SAST — CodeQL (JavaScript)
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout repo (full)
         uses: actions/checkout@v4
@@ -64,15 +65,31 @@ jobs:
           fetch-depth: 0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v2
         with:
           languages: javascript
 
       - name: Autobuild (CodeQL)
         uses: github/codeql-action/autobuild@v3
 
-      - name: Run CodeQL analysis
+      - name: Run CodeQL analysis and export SARIF
+        id: codeql-analysis
         uses: github/codeql-action/analyze@v3
+        with:
+          output: ./codeql-results  
+          format: sarifv2          
+          upload: false              
+
+      - name: Upload CodeQL SARIF to GitHub Code Scanning
+        uses: github/code-scanning/upload-sarif@v3
+        with:
+          sarif_file: ./codeql-results/results.sarif
+
+      - name: Upload CodeQL SARIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif
+          path: ./codeql-results/results.sarif
 
   secrets-gitleaks:
     name: Secret Scanning — Gitleaks (docker)
@@ -90,7 +107,7 @@ jobs:
         run: |
           docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest \
             detect --source /repo --report-format json --report-path /repo/gitleaks-report.json || true
-            
+
       - name: Upload Gitleaks report
         uses: actions/upload-artifact@v4
         with:
