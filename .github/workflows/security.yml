@@ -69,15 +69,14 @@ jobs:
           languages: javascript
 
       - name: Autobuild (CodeQL)
-        uses: github/codeql-action/autobuild@v2
+        uses: github/codeql-action/autobuild@v3
 
       - name: Run CodeQL analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
 
   secrets-gitleaks:
     name: Secret Scanning — Gitleaks (docker)
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout repo (full history)
         uses: actions/checkout@v4
@@ -91,10 +90,7 @@ jobs:
         run: |
           docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest \
             detect --source /repo --report-format json --report-path /repo/gitleaks-report.json || true
-
-      - name: Debug after scan
-        run: ls -la
-
+            
       - name: Upload Gitleaks report
         uses: actions/upload-artifact@v4
         with:
