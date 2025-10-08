@@ -53,3 +53,46 @@ jobs:
         with:
           name: snyk-report-sarif
           path: snyk.sarif
+
+  sast-codeql:
+    name: SAST — CodeQL (JavaScript)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout repo (full)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+
+      - name: Autobuild (CodeQL)
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v2
+
+  secrets-gitleaks:
+    name: Secret Scanning — Gitleaks
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout repo (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: zricethezav/gitleaks-action@v2
+        with:
+          args: '--path=/github/workspace --report-format json --report-path gitleaks-report.json'
+
+      - name: Upload Gitleaks report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+
