@@ -80,11 +80,6 @@ jobs:
           format: sarifv2          
           upload: false              
 
-      - name: Upload CodeQL SARIF to GitHub Code Scanning
-        uses: github/code-scanning/upload-sarif@v2
-        with:
-          sarif_file: ./codeql-results/results.sarif
-
       - name: Upload CodeQL SARIF artifact
         uses: actions/upload-artifact@v4
         with:
