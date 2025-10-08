@@ -74,10 +74,8 @@ jobs:
       - name: Run CodeQL analysis
         uses: github/codeql-action/analyze@v3
 
-      - name: List SARIF files (debug)
-        run: |
-          echo "=== Listing .sarif files ==="
-          find $GITHUB_WORKSPACE -type f -name '*.sarif' -print || true
+      - name: Find CodeQL databases
+        run: find /github/workspace -type d -name codeql_databases
 
       - name: Upload SARIF artifact
         uses: actions/upload-artifact@v4
