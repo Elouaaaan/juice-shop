@@ -57,48 +57,21 @@ jobs:
   sast-semgrep:
     name: SAST — Semgrep
     runs-on: ubuntu-latest
+
+    container:
+      image: semgrep/semgrep
+
+    if: (github.actor != 'dependabot[bot]')
+
     steps:
-      - name: Checkout repo (full history)
+      - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install Node dependencies (for semgrep rules that may require project files)
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-
-      - name: Setup Python (for Semgrep)
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Install Semgrep
-        run: |
-          python -m pip install --upgrade pip
-          pip install semgrep
-
-      - name: Run Semgrep (JSON + SARIF)
-        run: |
-          # use registry rules for JavaScript/Node and OWASP quick checks; adjust --config to your needs
-          semgrep --config p/javascript --config p/owasp-top-10 --json --output semgrep.json --sarif semgrep.sarif --timeout 300 || true
-
+      - run: semgrep ci --sarif > semgrep.sarif
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        
       - name: Debug list files
         run: ls -la
-
-      - name: Upload Semgrep JSON report
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-report-json
-          path: semgrep.json
 
       - name: Upload Semgrep SARIF report
         uses: actions/upload-artifact@v4
