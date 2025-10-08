@@ -65,7 +65,7 @@ jobs:
           fetch-depth: 0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: javascript
 
@@ -81,7 +81,7 @@ jobs:
           upload: false              
 
       - name: Upload CodeQL SARIF to GitHub Code Scanning
-        uses: github/code-scanning/upload-sarif@v3
+        uses: github/code-scanning/upload-sarif@v2
         with:
           sarif_file: ./codeql-results/results.sarif
 
