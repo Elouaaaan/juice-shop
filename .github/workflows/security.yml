@@ -50,29 +50,50 @@ jobs:
           name: snyk-report-sarif
           path: snyk.sarif
 
-  sast-semgrep:
-    name: SAST — Semgrep
-    runs-on: ubuntu-latest
 
-    container:
-      image: semgrep/semgrep
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
 
-    if: (github.actor != 'dependabot[bot]')
-
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: actions
+          build-mode: none
+        - language: javascript-typescript
+          build-mode: none
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      - run: semgrep ci --sarif > semgrep.sarif
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Upload Semgrep SARIF report
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-report-sarif
-          path: semgrep.sarif
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
 
+    - if: matrix.build-mode == 'manual'
+      shell: bash
+      run: |
+        echo 'If you are using a "manual" build mode for one or more of the' \
+          'languages you are analyzing, replace this with the commands to build' \
+          'your code, for example:'
+        echo '  make bootstrap'
+        echo '  make release'
+        exit 1
 
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+
+        
   secrets-gitleaks:
     name: Secret Scanning — Gitleaks (docker)
     runs-on: ubuntu-latest
@@ -114,7 +135,7 @@ jobs:
 
       - name: Start application
         run: npm start &
-        
+
       - name: Run ZAP Baseline (JSON output)
         uses: zaproxy/action-baseline@v0.14.0
         with:
