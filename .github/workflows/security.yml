@@ -38,20 +38,14 @@ jobs:
           args: --json-file-output=snyk-report.json --sarif-file-output=snyk.sarif --all-projects
         continue-on-error: true
 
-      - name: Upload Snyk JSON report
-        uses: actions/upload-artifact@v4
+      - name: Upload Snyk SARIF to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
         with:
-          name: snyk-report-json
-          path: snyk-report.json
-
-      - name: Upload Snyk SARIF report
-        uses: actions/upload-artifact@v4
-        with:
-          name: snyk-report-sarif
-          path: snyk.sarif
+          sarif_file: snyk.sarif
 
 
-  analyze:
+  sast-codeql:
     name: Analyze (${{ matrix.language }})
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     permissions:
