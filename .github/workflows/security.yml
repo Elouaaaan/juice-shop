@@ -98,21 +98,12 @@ jobs:
     name: Secret Scanning — Gitleaks (docker)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo (full history)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Run Gitleaks (docker) and write report into workspace
-        run: |
-          docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest \
-            detect --source /repo --report-format json --report-path /repo/gitleaks-report.json || true
-            
-      - name: Upload Gitleaks report
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitleaks-report.json
-          path: gitleaks-report.json
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dast-zap:
     name: DAST - OWASP ZAP
